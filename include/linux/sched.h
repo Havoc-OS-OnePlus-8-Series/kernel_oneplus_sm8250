@@ -2441,4 +2441,9 @@ static inline void task_tli_init(struct task_struct *cur)
 }
 #endif
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+int do_stune_boost(char *st_name, int boost);
+int reset_stune_boost(char *st_name);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
+
 #endif
