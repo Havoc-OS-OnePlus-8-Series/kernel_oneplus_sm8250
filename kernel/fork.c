@@ -105,6 +105,7 @@
 #include <linux/oem/im.h>
 #endif
 
+#include <linux/devfreq_boost.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -2472,6 +2473,12 @@ long _do_fork(unsigned long clone_flags,
 	struct task_struct *p;
 	int trace = 0;
 	long nr;
+
+	/* Boost CPU to the max for 150 ms when userspace launches an app */
+	if (is_zygote_pid(current->pid)) {
+		devfreq_boost_kick_max(DEVFREQ_MSM_LLCCBW_DDR, 150);
+		devfreq_boost_kick_max(DEVFREQ_MSM_CPU_LLCCBW, 150);
+	}
 
 	/*
 	 * Determine whether and which event to report to ptracer.  When
