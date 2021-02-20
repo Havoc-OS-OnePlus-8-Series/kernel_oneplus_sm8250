@@ -1596,6 +1596,12 @@ struct task_struct {
 	unsigned in_binder:1;
 	unsigned in_epoll:1;
 #endif
+	struct {
+		struct work_struct work;
+		atomic_t running;
+		bool free_stack;
+	} async_free;
+
         /* task is frozen/stopped (used by the cgroup freezer) */
         ANDROID_KABI_USE(1, unsigned frozen:1);
 
