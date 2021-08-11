@@ -5352,6 +5352,7 @@ int smblib_set_prop_reset_rd(struct smb_charger *chg,
 		smblib_err(chg, "Couldn't read TYPE_C_CC_CURRSRC_CONTROL_REG rc=%d\n",
 				rc);
 		return rc;
+
 	}
 	smblib_err(chg, "0x155C value is 0x%04x\n", stat);
 	schedule_delayed_work(&chg->reset_rd_work, msecs_to_jiffies(500));
