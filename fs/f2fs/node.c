@@ -1929,9 +1929,11 @@ continue_unlock:
 				goto continue_unlock;
 			}
 
+			/* flush inline_data/inode, if it's async context. */
 			if (!do_balance)
 				goto write_node;
 
+			/* flush inline_data */
 			if (is_inline_node(page)) {
 				clear_inline_node(page);
 				unlock_page(page);
