@@ -1137,7 +1137,8 @@ static ssize_t mm_stat_show(struct device *dev,
 			pool_stats.pages_compacted,
 			(u64)atomic64_read(&zram->stats.huge_pages),
 			zram_dedup_dup_size(zram),
-			zram_dedup_meta_size(zram));
+			zram_dedup_meta_size(zram),
+			atomic_long_read(&pool_stats.pages_compacted));
 	up_read(&zram->init_lock);
 
 	return ret;
