@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2015, 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015, 2018-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -30,6 +30,7 @@
 #define PLL_VOTE_FSM_RESET	BIT(21)
 #define PLL_UPDATE		BIT(22)
 #define PLL_UPDATE_BYPASS	BIT(23)
+#define PLL_FSM_LEGACY_MODE	BIT(24)
 #define PLL_ALPHA_EN		BIT(24)
 #define PLL_OFFLINE_ACK		BIT(28)
 #define ALPHA_PLL_ACK_LATCH	BIT(29)
@@ -1265,10 +1266,10 @@ static int clk_zonda_pll_enable(struct clk_hw *hw)
 static void clk_zonda_pll_disable(struct clk_hw *hw)
 {
 	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
-	u32 val, mask, off = pll->offset;
+	u32 val, mask;
 	int ret;
 
-	ret = regmap_read(pll->clkr.regmap, off + PLL_MODE(pll), &val);
+	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
 	if (ret)
 		return;
 
@@ -1304,12 +1305,12 @@ static int clk_zonda_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 {
 	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
 	unsigned long rrate;
-	u32 test_ctl_val;
+	u32 test_ctl_val, alpha_width = pll_alpha_width(pll);
 	u32 l;
 	u64 a;
 	int ret;
 
-	rrate = alpha_pll_round_rate(rate, prate, &l, &a, ALPHA_BITWIDTH);
+	rrate = alpha_pll_round_rate(rate, prate, &l, &a, alpha_width);
 	/*
 	 * Due to a limited number of bits for fractional rate programming, the
 	 * rounded up rate could be marginally higher than the requested rate.
@@ -1322,6 +1323,9 @@ static int clk_zonda_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL(pll), a);
 	regmap_write(pll->clkr.regmap, PLL_L_VAL(pll), l);
+
+	if (!clk_hw_is_enabled(hw))
+		return 0;
 
 	/* Wait before polling for the frequency latch */
 	udelay(5);
@@ -1348,12 +1352,12 @@ static unsigned long
 clk_zonda_pll_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
 {
 	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
-	u32 l, frac;
+	u32 l, frac, alpha_width = pll_alpha_width(pll);
 
 	regmap_read(pll->clkr.regmap, PLL_L_VAL(pll), &l);
 	regmap_read(pll->clkr.regmap, PLL_ALPHA_VAL(pll), &frac);
 
-	return alpha_pll_calc_rate(parent_rate, l, frac, ALPHA_BITWIDTH);
+	return alpha_pll_calc_rate(parent_rate, l, frac, alpha_width);
 }
 
 static void clk_zonda_pll_list_registers(struct seq_file *f, struct clk_hw *hw)
@@ -2076,6 +2080,9 @@ void clk_lucid_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 				 PLL_UPDATE_BYPASS,
 				 PLL_UPDATE_BYPASS);
 
+	if (pll->flags & SUPPORTS_FSM_LEGACY_MODE)
+		regmap_update_bits(regmap, PLL_MODE(pll), PLL_FSM_LEGACY_MODE,
+						PLL_FSM_LEGACY_MODE);
 	/* Disable PLL output */
 	regmap_update_bits(regmap, PLL_MODE(pll),
 					PLL_OUTCTRL, 0);
